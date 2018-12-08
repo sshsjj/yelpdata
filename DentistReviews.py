@@ -19,12 +19,14 @@ df = spark.read.format(file_type) \
 temp_table_name = "dentist_reviews_clean_csv"
 df.createOrReplaceTempView(temp_table_name)
 
-# Labeled the reviews which stores in stars_y column (>=4.0 : 1, <4.0 : 0), filtered out the non-word characters and merge multiple spaces into one
+# Labele the reviews which stores in stars_y column (>=4.0 : 1, <4.0 : 0), filter out the non-word characters and merge multiple spaces into one
 light_df = spark.sql("""select case when stars_y >= 4.0 then 1 else 0 end as label, regexp_replace(regexp_replace(lower(text),'(\\\W)', ' '), ' +', ' ') as text from dentist_reviews_clean_csv""")
 display(light_df)
 
 # Spark ML Pipeline
 from pyspark.ml.feature import StringIndexer
+# Since I have already labeled the data from the spark sql, String Indexer was not used
+# Example: label_str = StringIndexer(inputCol = "result", outputCol = "label")
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.classification import LogisticRegression
@@ -32,9 +34,11 @@ from pyspark.ml.classification import LogisticRegression
 (train_set, val_set) = light_df.randomSplit([0.7, 0.3], seed = 2000)
 
 tokenizer = Tokenizer(inputCol="text", outputCol="words")
+# hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures", numFeatures=2**16)
 cv = CountVectorizer(vocabSize=2**16, inputCol="words", outputCol='cv')
 idf = IDF(inputCol="cv", outputCol="features", minDocFreq = 5)
 lr = LogisticRegression(maxIter=100)
+#pipeline = Pipeline(stages=[tokenizer, hashtf, idf])
 pipeline = Pipeline(stages=[tokenizer, cv, idf, lr])
 
 pipelineFit = pipeline.fit(train_set)
