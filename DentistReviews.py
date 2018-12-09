@@ -27,9 +27,12 @@ display(light_df)
 from pyspark.ml.feature import StringIndexer
 # Since I have already labeled the data from the spark sql, String Indexer was not used
 # Example: label_str = StringIndexer(inputCol = "result", outputCol = "label")
-from pyspark.ml import Pipeline
+from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml import Pipeline
+
 
 (train_set, val_set) = light_df.randomSplit([0.7, 0.3], seed = 2000)
 
@@ -40,6 +43,7 @@ idf = IDF(inputCol="cv", outputCol="features", minDocFreq = 5)
 lr = LogisticRegression(maxIter=100)
 #pipeline = Pipeline(stages=[tokenizer, hashtf, idf])
 pipeline = Pipeline(stages=[tokenizer, cv, idf, lr])
+evaluator = BinaryClassificationEvaluator(rawPredictionCol="rawPrediction")
 
 pipelineFit = pipeline.fit(train_set)
 predictions = pipelineFit.transform(val_set)
